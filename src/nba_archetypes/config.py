@@ -10,9 +10,11 @@ MIN_MINS = 250
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw" / "2025_26"
-INTERIM_DATA_DIR = PROJECT_ROOT / "data" / "interim" / "2025_26"
-PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed" / "2025_26"
+SEASON_FOLDER = SEASON.replace("-", "_")
+
+RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw" / SEASON_FOLDER
+INTERIM_DATA_DIR = PROJECT_ROOT / "data" / "interim" / SEASON_FOLDER
+PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed" / SEASON_FOLDER
 METADATA_DIR = PROJECT_ROOT / "data" / "metadata"
 
 FIGURES_DIR = PROJECT_ROOT / "figures"
