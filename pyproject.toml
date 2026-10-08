@@ -9,6 +9,26 @@ version = "0.1.0"
 description = "NBA playing style, similarity, and archetype analysis"
 requires-python = ">=3.10"
 
+dependencies = [
+    "pandas",
+    "numpy",
+    "scipy",
+    "scikit-learn",
+    "matplotlib",
+    "seaborn",
+    "plotly",
+    "nba_api",
+    "duckdb",
+    "pyarrow",
+    "jupyter",
+    "ipykernel"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "ruff"
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

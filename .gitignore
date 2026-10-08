@@ -217,7 +217,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# User Added
+# Dev Added
 .venv/
 __pycache__/
 .ipynb_checkpoints/
@@ -226,3 +226,12 @@ __pycache__/
 
 data/raw/
 data/processed/
+
+# Local databases
+*.duckdb
+
+# Python cache
+*.pyc
+
+# Test cache
+.pytest_cache/
