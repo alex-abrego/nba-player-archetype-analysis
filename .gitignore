@@ -226,6 +226,7 @@ __pycache__/
 
 data/raw/
 data/processed/
+data/interim/
 
 # Local databases
 *.duckdb
