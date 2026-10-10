@@ -1,0 +1,19 @@
+Dataset,Rows,Columns,Unique Players,Duplicate Players
+advanced_stats,582,79,582,0
+base_stats,582,69,582,0
+catchshoot_stats,582,16,582,0
+defense_stats,582,14,582,0
+drives_stats,582,25,582,0
+efficiency_stats,582,22,582,0
+elbowtouch_stats,582,26,582,0
+hustle_stats,581,28,581,0
+painttouch_stats,582,26,582,0
+passing_stats,582,18,582,0
+possessions_stats,582,21,582,0
+posttouch_stats,582,26,582,0
+pullupshot_stats,582,16,582,0
+rebounding_stats,578,35,578,0
+scoring_splits,582,53,582,0
+shot_location_stats,582,30,582,0
+speeddistance_stats,582,15,582,0
+usage_stats,582,53,582,0
