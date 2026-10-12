@@ -5,7 +5,8 @@ from nba_api.stats.endpoints import (
     leaguedashplayerstats,
     leaguedashptstats,
     leaguedashplayershotlocations,
-    leaguehustlestatsplayer
+    leaguehustlestatsplayer,
+    leagueseasonmatchups
 )
 
 
@@ -43,70 +44,38 @@ def save_raw_data(df: pd.DataFrame, file_name: str) -> None:
     print(f"Saved {file_name}: {len(df)} rows and {len(df.columns)} columns")
 
 
-def get_base_stats(force=False) -> str:
+def get_player_stats(measure_type: list[str] | None = None, force=False) -> list[str]:
     """
-    Retrieves base player stats from the NBA API and saves them as a Parquet file.
+    Retrieves player stats (base, advanced, scoring, and usage) from the NBA API and saves them as a Parquet file.
     
     Args:
+        measure_type (list[str] | None): A list of measure types to retrieve. If None, retrieves all types needed.
         force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
     """
-    if not force and (RAW_DATA_DIR / "base_stats.parquet").exists():
-        print("Dataset already exists. Keeping existing file.")
-        return str(RAW_DATA_DIR / "base_stats.parquet")
-    
-    df = leaguedashplayerstats.LeagueDashPlayerStats(
-        measure_type_detailed_defense="Base",
-        per_mode_detailed="Totals",
-        season=SEASON,
-        season_type_all_star=SEASON_TYPE,
-        timeout=60
-    ).get_data_frames()[0]
-    
-    return save_raw_data(df, "base_stats")
-
-
-def get_advanced_stats(force=False) -> str:
-    """
-    Retrieves advanced player stats from the NBA API and saves them as a Parquet file.
-    
-    Args:
-        force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
-    """
-    if not force and (RAW_DATA_DIR / "advanced_stats.parquet").exists():
-        print("Dataset already exists. Keeping existing file.")
-        return str(RAW_DATA_DIR / "advanced_stats.parquet")
-    
-    df = leaguedashplayerstats.LeagueDashPlayerStats(
-        measure_type_detailed_defense="Advanced",
-        per_mode_detailed="Totals",
-        season=SEASON,
-        season_type_all_star=SEASON_TYPE,
-        timeout=60
-    ).get_data_frames()[0]
-    
-    return save_raw_data(df, "advanced_stats")
-
-
-def get_scoring_splits(force=False) -> str:
-    """
-    Retrieves scoring split stats from the NBA API and saves them as a Parquet file.
-    
-    Args:
-        force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
-    """
-    if not force and (RAW_DATA_DIR / "scoring_splits.parquet").exists():
-        print("Dataset already exists. Keeping existing file.")
-        return str(RAW_DATA_DIR / "scoring_splits.parquet")
-    
-    df = leaguedashplayerstats.LeagueDashPlayerStats(
-        measure_type_detailed_defense="Scoring",
-        per_mode_detailed="Totals",
-        season=SEASON,
-        season_type_all_star=SEASON_TYPE,
-        timeout=60
-    ).get_data_frames()[0]
-    
-    return save_raw_data(df, "scoring_splits")
+    if not force:
+        return print("Change force to True if datasets don't already exist.")
+    if measure_type is None:
+        measure_type = [
+            "Base",
+            "Advanced",
+            "Scoring",
+            "Usage"
+            ]
+    for type in measure_type:
+        print(f"Collecting {type} stats...")
+        try:
+            df = leaguedashplayerstats.LeagueDashPlayerStats(
+                measure_type_detailed_defense=type,
+                per_mode_detailed="Totals",
+                season=SEASON,
+                season_type_all_star=SEASON_TYPE,
+                timeout=60
+            ).get_data_frames()[0]
+            save_raw_data(df, f"{type.lower()}_stats")
+            sleep(1.5)
+        except Exception as e:
+            print(f"Error occurred while collecting {type} stats: {e}")
+    return [f"{type.lower()}_stats.parquet" for type in measure_type]
 
 
 def get_tracking_stats(tracking_type: list[str] | None = None, force = False) -> list[str]:
@@ -118,7 +87,7 @@ def get_tracking_stats(tracking_type: list[str] | None = None, force = False) ->
         force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
     """
     if not force:
-        return print("Datasets already exist. Keeping existing files. Change force to True if this is an error.")
+        return print("Change force to True if datasets don't already exist.")
     if tracking_type is None:
         tracking_type = [
             "Passing", 
@@ -150,3 +119,67 @@ def get_tracking_stats(tracking_type: list[str] | None = None, force = False) ->
     return [f"{type.lower()}_stats.parquet" for type in tracking_type]
 
 
+def get_shot_location_stats(force=False) -> str:
+    """
+    Retrieves shot location stats from the NBA API and saves them as a Parquet file.
+    
+    Args:
+        force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
+    """
+    if not force and (RAW_DATA_DIR / "shot_locations.parquet").exists():
+        print("Dataset already exists. Keeping existing file. Change force to True if you want to overwrite it.")
+        return str(RAW_DATA_DIR / "shot_locations.parquet")
+    
+    df = leaguedashplayershotlocations.LeagueDashPlayerShotLocations(
+        measure_type_simple="Base",
+        per_mode_detailed="Totals",
+        distance_range="By Zone",
+        season=SEASON,
+        season_type_all_star=SEASON_TYPE,
+        timeout=60
+    ).get_data_frames()[0]
+    
+    return save_raw_data(df, "shot_locations")
+
+
+def get_hustle_stats(force=False) -> str:
+    """
+    Retrieves hustle stats from the NBA API and saves them as a Parquet file.
+    
+    Args:
+        force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
+    """
+    if not force and (RAW_DATA_DIR / "hustle_stats.parquet").exists():
+        print("Dataset already exists. Keeping existing file. Change force to True if you want to overwrite it.")
+        return str(RAW_DATA_DIR / "hustle_stats.parquet")
+
+    df = leaguehustlestatsplayer.LeagueHustleStatsPlayer(
+        season=SEASON,
+        season_type_all_star=SEASON_TYPE,
+        per_mode_time="Totals",
+        timeout=60
+        ).get_data_frames()[0]
+
+    return save_raw_data(df, "hustle_stats")
+
+
+def get_matchup_stats(force=False) -> str:
+    """
+    Retrieves matchup stats from the NBA API and saves them as a Parquet file.
+    
+    Args:
+        force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
+    """
+    if not force and (RAW_DATA_DIR / "matchup_stats.parquet").exists():
+        print("Dataset already exists. Keeping existing file. Change force to True if you want to overwrite it.")
+        return str(RAW_DATA_DIR / "matchup_stats.parquet")
+
+    df = leagueseasonmatchups.LeagueSeasonMatchups(
+        season=SEASON,
+        season_type_playoffs=SEASON_TYPE,
+        per_mode_simple="Totals",
+        league_id="00",
+        timeout=60
+        ).get_data_frames()[0]
+
+    return save_raw_data(df, "matchup_stats")

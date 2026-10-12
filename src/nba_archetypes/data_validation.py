@@ -42,7 +42,7 @@ def player_coverage_report(datasets: dict[str, pd.DataFrame], eligible_players: 
     Returns:
         A DataFrame containing the coverage report.
     """
-    coverage_report = pd.DataFrame(columns=["dataset", "total_eligible", "dataset_count", "coverage_percentage"])
+    coverage_report = []
 
     total_eligible = len(eligible_players)
     for name, df in datasets.items():
