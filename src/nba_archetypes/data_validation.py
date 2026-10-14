@@ -1,20 +1,6 @@
 import pandas as pd
 from nba_archetypes.config import METADATA_DIR
 
-def summarize_data(df: pd.DataFrame) -> None:
-    """
-    Prints a summary of the DataFrame, including the number of rows, columns, and missing values.
-
-    Args:
-        df (pd.DataFrame): The DataFrame to summarize.
-
-    Returns:
-        A printed summary of the DataFrame.
-    """
-    print(f"Rows: {len(df):,}")
-    print(f"Columns: {len(df.columns):,}")
-    print(f"Missing values: {df.isna().sum().sum():,}")
-    
 
 def check_unique_ids(df: pd.DataFrame, key="PLAYER_ID") -> None:
     """
@@ -43,18 +29,17 @@ def player_coverage_report(datasets: dict[str, pd.DataFrame], eligible_players: 
         A DataFrame containing the coverage report.
     """
     coverage_report = []
+    eligible_ids = set(eligible_players["PLAYER_ID"])
 
-    total_eligible = len(eligible_players)
     for name, df in datasets.items():
-        dataset_count = df["PLAYER_ID"].nunique()
-        coverage_percentage = (dataset_count / total_eligible) * 100
-        coverage_report = coverage_report.append({
+        dataset_ids = set(df[[col for col in df.columns if "PLAYER_ID" in str(col)][0]])
+        coverage_percentage = len((eligible_ids.intersection(dataset_ids))) / len(eligible_ids) * 100
+        coverage_report.append({
             "dataset": name,
-            "total_eligible": total_eligible,
-            "dataset_count": dataset_count,
             "coverage_percentage": coverage_percentage
-        }, ignore_index=True)
+        })
 
+    coverage_report = pd.DataFrame(coverage_report)
     coverage_report.sort_values("coverage_percentage", ascending=False)
-    coverage_report.to_csv(METADATA_DIR / "player_coverage_report.csv", index=False)
     return coverage_report
+
