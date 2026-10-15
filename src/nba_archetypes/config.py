@@ -4,7 +4,7 @@ from pathlib import Path
 
 SEASON = "2025-26"
 SEASON_TYPE = "Regular Season"
-MIN_MINS = 250
+MIN_MINUTES = 250
 
 # Project Paths
 
@@ -16,5 +16,7 @@ RAW_DATA_DIR = PROJECT_ROOT / "data" / "raw" / SEASON_FOLDER
 INTERIM_DATA_DIR = PROJECT_ROOT / "data" / "interim" / SEASON_FOLDER
 PROCESSED_DATA_DIR = PROJECT_ROOT / "data" / "processed" / SEASON_FOLDER
 METADATA_DIR = PROJECT_ROOT / "data" / "metadata"
+
+SQL_DIR = PROJECT_ROOT / "sql"
 
 FIGURES_DIR = PROJECT_ROOT / "figures"
