@@ -1,5 +1,5 @@
 import pandas as pd
-from nba_archetypes.config import METADATA_DIR
+import numpy as np
 
 
 def check_unique_ids(df: pd.DataFrame, key: str) -> None:
@@ -54,7 +54,7 @@ def missing_value_report(datasets: dict[str, pd.DataFrame]):
                 mv_report.append({
                     "dataset": dataset_name,
                     "column": col,
-                    "missing_percentage": missing_pct
+                    "missing_percentage": round(missing_pct, 2)
                 })
     mv_report = pd.DataFrame(mv_report).sort_values(by=["dataset", "missing_percentage"], ascending=[True, False]).reset_index(drop=True)
     return mv_report

@@ -1,4 +1,5 @@
 import pandas as pd
+import pathlib as Path
 from time import sleep
 from nba_archetypes.config import SEASON, SEASON_TYPE, RAW_DATA_DIR
 from nba_api.stats.endpoints import (
@@ -27,17 +28,17 @@ def csv_to_parquet(csv_file_name: str, parquet_file_name: str) -> None:
     print(f"Converted {parquet_file_name} to Parquet: {len(df)} rows and {len(df.columns)} columns")
 
 
-def save_parquet_file(df: pd.DataFrame, file_name: str, target_dir: str) -> None:
+def save_parquet_file(df: pd.DataFrame, file_name: str, target_dir: Path) -> None:
     """
-    Saves a raw NBA API DataFrame as a Parquet file.
+    Saves a DataFrame as a Parquet file.
     
     Args:
         df (pd.DataFrame): The DataFrame to save.
         file_name (str): The name of the Parquet file to create (without .parquet extension).
-        dir (str): The file Path that the saved file should be stored in.
+        target_dir (Path): The file Path that the saved file should be stored in.
 
     Results:
-        A Parquet file saved in the RAW_DATA_DIR directory.
+        A Parquet file saved in the target_dir directory.
     """
     if target_dir != RAW_DATA_DIR and (target_dir / f"{file_name}.parquet").exists():
         print("File already exists. Keeping existing file.")
@@ -48,17 +49,17 @@ def save_parquet_file(df: pd.DataFrame, file_name: str, target_dir: str) -> None
     print(f"Saved {file_name}: {len(df)} rows and {len(df.columns)} columns")
 
 
-def save_csv_file(df: pd.DataFrame, file_name: str, target_dir: str) -> None:
+def save_csv_file(df: pd.DataFrame, file_name: str, target_dir: Path) -> None:
     """
-    Saves a raw NBA API DataFrame as a csv file.
+    Saves a DataFrame as a csv file.
     
     Args:
         df (pd.DataFrame): The DataFrame to save.
         file_name (str): The name of the csv file to create (without .csv extension).
-        dir (str): The file Path that the saved file should be stored in.
+        dir (Path): The file Path that the saved file should be stored in.
 
     Results:
-        A csv file saved in the RAW_DATA_DIR directory.
+        A csv file saved in the target_dir directory.
     """
     if target_dir != RAW_DATA_DIR and (target_dir / f"{file_name}.csv").exists():
         print("File already exists. Keeping existing file.")
