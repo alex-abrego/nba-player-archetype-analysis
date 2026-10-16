@@ -219,10 +219,12 @@ __marimo__/
 
 # Dev Added
 .venv/
+.venv-check/
 __pycache__/
 .ipynb_checkpoints/
 .env
 .DS_Store
+*.egg-info/
 
 data/raw/
 data/processed/
