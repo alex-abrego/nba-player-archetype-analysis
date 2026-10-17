@@ -1,30 +1,38 @@
 import pandas as pd
-import numpy as np
 
 
-def check_unique_ids(df: pd.DataFrame, key: str) -> None:
+def check_unique_ids(df: pd.DataFrame, id: str) -> bool:
     """
     Checks if the specified key column has only unique values in the DataFrame. Raises an error if duplicates are found.
     
     Args:
         df (pd.DataFrame): The DataFrame to check.
-        key (str): The column name to check for uniqueness.
+        id (str): The column name to check for uniqueness.
 
     Returns:
-        None. Raises an error if duplicates are found.
+        bool
     """
-    key = df[[col for col in df.columns if "PLAYER_ID" in str(col)][-1]]
-    if not key.is_unique:
-        return False
-    return True
+    return df[id].is_unique
     
 
-def check_required_cols(df: pd.DataFrame, required: list[str]):
+def check_required_cols(df: pd.DataFrame, required: list[str]) -> bool:
     for column in required:
-        matched = any(column in str(col) for col in df.columns)
-        if not matched:
+        if column not in df.columns:
             return False
     return True
+
+
+def validate_api_data(df, required_columns, id_columns=("PLAYER_ID",), unique=True):
+    if df.empty:
+        raise ValueError("The API returned an empty dataset.")
+    if not check_required_cols(df, list(required_columns) + list(id_columns)):
+        raise ValueError("The dataset is missing required columns.")
+    for column in id_columns:
+        if df[column].isna().any():
+            raise ValueError(f"{column} contains missing values.")
+    if unique:
+        if not check_unique_ids(df, id_columns[0]):
+            raise ValueError("Duplicate player IDs found.")
 
 
 def dataset_inventory(datasets: dict[str, pd.DataFrame]):
@@ -56,7 +64,8 @@ def missing_value_report(datasets: dict[str, pd.DataFrame]):
                     "column": col,
                     "missing_percentage": round(missing_pct, 2)
                 })
-    mv_report = pd.DataFrame(mv_report).sort_values(by=["dataset", "missing_percentage"], ascending=[True, False]).reset_index(drop=True)
+    mv_report = pd.DataFrame(mv_report, columns=["dataset", "column", "missing_percentage"])
+    mv_report = mv_report.sort_values(by=["dataset", "missing_percentage"], ascending=[True, False]).reset_index(drop=True)
     return mv_report
 
 

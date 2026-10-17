@@ -1,7 +1,8 @@
 import pandas as pd
-import pathlib as Path
+from pathlib import Path
 from time import sleep
 from nba_archetypes.config import SEASON, SEASON_TYPE, RAW_DATA_DIR
+from nba_archetypes.data_validation import validate_api_data
 from nba_api.stats.endpoints import (
     leaguedashplayerstats,
     leaguedashptstats,
@@ -11,7 +12,7 @@ from nba_api.stats.endpoints import (
 )
 
 
-def csv_to_parquet(csv_file_name: str, parquet_file_name: str) -> None:
+def csv_to_parquet(csv_file_name: str, parquet_file_name: str, target_dir: Path) -> None:
     """
     Converts a CSV file to a Parquet file.
     
@@ -23,12 +24,12 @@ def csv_to_parquet(csv_file_name: str, parquet_file_name: str) -> None:
         A Parquet file saved in the RAW_DATA_DIR directory.
     """
     df = pd.read_csv(RAW_DATA_DIR / f"{csv_file_name}.csv")
-    df.to_parquet(RAW_DATA_DIR / f"{parquet_file_name}.parquet", index = False)
+    save_parquet_file(df, parquet_file_name, target_dir)
 
     print(f"Converted {parquet_file_name} to Parquet: {len(df)} rows and {len(df.columns)} columns")
 
 
-def save_parquet_file(df: pd.DataFrame, file_name: str, target_dir: Path) -> None:
+def save_parquet_file(df: pd.DataFrame, file_name: str, target_dir: Path, overwrite: bool = False) -> Path:
     """
     Saves a DataFrame as a Parquet file.
     
@@ -40,16 +41,21 @@ def save_parquet_file(df: pd.DataFrame, file_name: str, target_dir: Path) -> Non
     Results:
         A Parquet file saved in the target_dir directory.
     """
-    if target_dir != RAW_DATA_DIR and (target_dir / f"{file_name}.parquet").exists():
-        print("File already exists. Keeping existing file.")
-        return
     target_dir.mkdir(parents=True, exist_ok=True)
-    df.to_parquet(target_dir / f"{file_name}.parquet", index=False)
-
+    file_path = target_dir / f"{file_name}.parquet"
+    if file_path.exists() and not overwrite:
+        raise FileExistsError(f"{file_name} already exists. Set overwrite = True to replace it.")
+    temp_path = target_dir / f"{file_name}_temp.parquet"
+    try:
+        df.to_parquet(temp_path, index=False)
+        temp_path.replace(file_path)
+    finally:
+        temp_path.unlink(missing_ok=True)
     print(f"Saved {file_name}: {len(df)} rows and {len(df.columns)} columns")
+    return file_path
 
 
-def save_csv_file(df: pd.DataFrame, file_name: str, target_dir: Path) -> None:
+def save_csv_file(df: pd.DataFrame, file_name: str, target_dir: Path, overwrite: bool = False) -> Path:
     """
     Saves a DataFrame as a csv file.
     
@@ -61,16 +67,21 @@ def save_csv_file(df: pd.DataFrame, file_name: str, target_dir: Path) -> None:
     Results:
         A csv file saved in the target_dir directory.
     """
-    if target_dir != RAW_DATA_DIR and (target_dir / f"{file_name}.csv").exists():
-        print("File already exists. Keeping existing file.")
-        return
     target_dir.mkdir(parents=True, exist_ok=True)
-    df.to_csv(target_dir / f"{file_name}.csv", index=False)
-
+    file_path = target_dir / f"{file_name}.csv"
+    if file_path.exists() and not overwrite:
+        raise FileExistsError(f"{file_name} already exists. Set overwrite = True to replace it.")
+    temp_path = target_dir / f"{file_name}_temp.csv"
+    try:
+        df.to_csv(temp_path, index=False)
+        temp_path.replace(file_path)
+    finally:
+        temp_path.unlink(missing_ok=True)
     print(f"Saved {file_name}: {len(df)} rows and {len(df.columns)} columns")
+    return file_path
 
 
-def get_player_stats(measure_type: list[str] | None = None, force=False) -> list[str]:
+def get_player_stats(measure_type: list[str] | None = None, force: bool = False) -> list[str]:
     """
     Retrieves player stats (base, advanced, scoring, and usage) from the NBA API and saves them as a Parquet file.
     
@@ -78,8 +89,6 @@ def get_player_stats(measure_type: list[str] | None = None, force=False) -> list
         measure_type (list[str] | None): A list of measure types to retrieve. If None, retrieves all types needed.
         force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
     """
-    if not force:
-        return print("Change force to True if datasets don't already exist.")
     if measure_type is None:
         measure_type = [
             "Base",
@@ -88,6 +97,11 @@ def get_player_stats(measure_type: list[str] | None = None, force=False) -> list
             "Usage"
             ]
     for type in measure_type:
+        file_name = f"{type.lower()}_stats.parquet"
+        file_path = RAW_DATA_DIR / file_name
+        if file_path.exists() and not force:
+            print(f"{file_name} already exists. Skipping download.")
+            continue
         print(f"Collecting {type} stats...")
         try:
             df = leaguedashplayerstats.LeagueDashPlayerStats(
@@ -97,10 +111,12 @@ def get_player_stats(measure_type: list[str] | None = None, force=False) -> list
                 season_type_all_star=SEASON_TYPE,
                 timeout=60
             ).get_data_frames()[0]
-            save_parquet_file(df, f"{type.lower()}_stats", RAW_DATA_DIR)
+            validate_api_data(df, required_columns=["PLAYER_ID", "PLAYER_NAME", "MIN"])
+            save_parquet_file(df, f"{type.lower()}_stats", RAW_DATA_DIR, overwrite=force)
             sleep(1.5)
         except Exception as e:
             print(f"Error occurred while collecting {type} stats: {e}")
+            raise
     return [f"{type.lower()}_stats.parquet" for type in measure_type]
 
 
@@ -112,8 +128,6 @@ def get_tracking_stats(tracking_type: list[str] | None = None, force = False) ->
         tracking_type (list[str] | None): A list of tracking stat types to retrieve. If None, retrieves all types needed.
         force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
     """
-    if not force:
-        return print("Change force to True if datasets don't already exist.")
     if tracking_type is None:
         tracking_type = [
             "Passing", 
@@ -128,6 +142,11 @@ def get_tracking_stats(tracking_type: list[str] | None = None, force = False) ->
             "Efficiency"
             ]
     for type in tracking_type:
+        file_name = f"{type.lower()}_stats.parquet"
+        file_path = RAW_DATA_DIR / file_name
+        if file_path.exists() and not force:
+            print(f"{file_name} already exists. Skipping download.")
+            continue
         print(f"Collecting {type} stats...")
         try:
             df = leaguedashptstats.LeagueDashPtStats(
@@ -138,14 +157,44 @@ def get_tracking_stats(tracking_type: list[str] | None = None, force = False) ->
                 season_type_all_star=SEASON_TYPE,
                 timeout=60
             ).get_data_frames()[0]
-            save_parquet_file(df, f"{type.lower()}_stats", RAW_DATA_DIR)
+            validate_api_data(df, required_columns=["PLAYER_ID", "PLAYER_NAME"])
+            save_parquet_file(df, f"{type.lower()}_stats", RAW_DATA_DIR, overwrite=force)
             sleep(1.5)
         except Exception as e:
             print(f"Error occurred while collecting {type} stats: {e}")
+            raise
     return [f"{type.lower()}_stats.parquet" for type in tracking_type]
 
 
-def get_shot_location_stats(force=False) -> str:
+def format_shot_locations(response):
+    results = response["resultSets"]
+    if isinstance(results, list):
+        results = results[0]
+    headers = results["headers"]
+    zone_info = headers[0]
+    column_info = headers[1]
+    zone_names = {
+        "Restricted Area": "RA",
+        "In The Paint (Non-RA)": "PAINT_NON_RA",
+        "Mid-Range": "MIDRANGE",
+        "Left Corner 3": "LEFT_CORNER_3",
+        "Right Corner 3": "RIGHT_CORNER_3",
+        "Above the Break 3": "ABOVE_BREAK_3",
+        "Backcourt": "BACKCOURT",
+    }
+    if (zone_info["columnNames"] != list(zone_names) or zone_info["columnSpan"] != 3):
+        raise ValueError("Unexpected shot-location format.")
+    num_player_cols = zone_info["columnsToSkip"]
+    columns = column_info["columnNames"][:num_player_cols]
+    for zone in zone_info["columnNames"]:
+        for stat in ["FGM", "FGA", "FG_PCT"]:
+            columns.append(f"{zone_names[zone]}_{stat}")
+    if len(columns) != len(column_info["columnNames"]):
+        raise ValueError("Shot-location columns do not match.")
+    return pd.DataFrame(results["rowSet"], columns=columns)
+
+
+def get_shot_location_stats(force=False) -> Path:
     """
     Retrieves shot location stats from the NBA API and saves them as a Parquet file.
     
@@ -153,58 +202,23 @@ def get_shot_location_stats(force=False) -> str:
         force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
     """
     if not force and (RAW_DATA_DIR / "shot_locations.parquet").exists():
-        print("Dataset already exists. Keeping existing file. Change force to True if you want to overwrite it.")
-        return str(RAW_DATA_DIR / "shot_locations.parquet")
+        print("shot_locations.parquet already exists. Skipping download.")
+        return RAW_DATA_DIR / "shot_locations.parquet"
     
-    df = leaguedashplayershotlocations.LeagueDashPlayerShotLocations(
+    response = leaguedashplayershotlocations.LeagueDashPlayerShotLocations(
         measure_type_simple="Base",
         per_mode_detailed="Totals",
         distance_range="By Zone",
         season=SEASON,
         season_type_all_star=SEASON_TYPE,
         timeout=60
-    ).get_data_frames()[0]
-
-    shot_location_columns = [
-    "PLAYER_ID",
-    "PLAYER_NAME",
-    "TEAM_ID",
-    "TEAM_ABBREVIATION",
-    "AGE",
-    "NICKNAME",
-    "RA_FGM",
-    "RA_FGA",
-    "RA_FG_PCT",
-    "PAINT_NON_RA_FGM",
-    "PAINT_NON_RA_FGA",
-    "PAINT_NON_RA_FG_PCT",
-    "MIDRANGE_FGM",
-    "MIDRANGE_FGA",
-    "MIDRANGE_FG_PCT",
-    "LEFT_CORNER_3_FGM",
-    "LEFT_CORNER_3_FGA",
-    "LEFT_CORNER_3_FG_PCT",
-    "RIGHT_CORNER_3_FGM",
-    "RIGHT_CORNER_3_FGA",
-    "RIGHT_CORNER_3_FG_PCT",
-    "ABOVE_BREAK_3_FGM",
-    "ABOVE_BREAK_3_FGA",
-    "ABOVE_BREAK_3_FG_PCT",
-    "BACKCOURT_FGM",
-    "BACKCOURT_FGA",
-    "BACKCOURT_FG_PCT",
-    "CORNER_3_FGM",
-    "CORNER_3_FGA",
-    "CORNER_3_PCT"
-    ]
-
-    shot_location_clean = df.copy()
-    shot_location_clean.columns = shot_location_columns
-    shot_location_clean = shot_location_clean.iloc[1:]
-    return save_parquet_file(shot_location_clean, "shot_locations", RAW_DATA_DIR)
+    )
+    df = format_shot_locations(response.get_dict())
+    validate_api_data(df, required_columns=["PLAYER_ID", "PLAYER_NAME", "RA_FGA"])
+    return save_parquet_file(df, "shot_locations", RAW_DATA_DIR, overwrite=force)
 
 
-def get_hustle_stats(force=False) -> str:
+def get_hustle_stats(force=False) -> Path:
     """
     Retrieves hustle stats from the NBA API and saves them as a Parquet file.
     
@@ -212,8 +226,8 @@ def get_hustle_stats(force=False) -> str:
         force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
     """
     if not force and (RAW_DATA_DIR / "hustle_stats.parquet").exists():
-        print("Dataset already exists. Keeping existing file. Change force to True if you want to overwrite it.")
-        return str(RAW_DATA_DIR / "hustle_stats.parquet")
+        print("hustle_stats.parquet already exists. Skipping download.")
+        return RAW_DATA_DIR / "hustle_stats.parquet"
 
     df = leaguehustlestatsplayer.LeagueHustleStatsPlayer(
         season=SEASON,
@@ -221,11 +235,11 @@ def get_hustle_stats(force=False) -> str:
         per_mode_time="Totals",
         timeout=60
         ).get_data_frames()[0]
+    validate_api_data(df, required_columns=["PLAYER_ID", "PLAYER_NAME"])
+    return save_parquet_file(df, "hustle_stats", RAW_DATA_DIR, overwrite=force)
 
-    return save_parquet_file(df, "hustle_stats", RAW_DATA_DIR)
 
-
-def get_matchup_stats(force=False) -> str:
+def get_matchup_stats(force=False) -> Path:
     """
     Retrieves matchup stats from the NBA API and saves them as a Parquet file.
     
@@ -233,8 +247,8 @@ def get_matchup_stats(force=False) -> str:
         force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
     """
     if not force and (RAW_DATA_DIR / "matchup_stats.parquet").exists():
-        print("Dataset already exists. Keeping existing file. Change force to True if you want to overwrite it.")
-        return str(RAW_DATA_DIR / "matchup_stats.parquet")
+        print("matchup_stats.parquet already exists. Skipping download.")
+        return RAW_DATA_DIR / "matchup_stats.parquet"
 
     df = leagueseasonmatchups.LeagueSeasonMatchups(
         season=SEASON,
@@ -243,5 +257,5 @@ def get_matchup_stats(force=False) -> str:
         league_id="00",
         timeout=60
         ).get_data_frames()[0]
-
-    return save_parquet_file(df, "matchup_stats", RAW_DATA_DIR)
+    validate_api_data(df, required_columns=["OFF_PLAYER_ID", "DEF_PLAYER_ID", "PARTIAL_POSS"], id_columns=("OFF_PLAYER_ID", "DEF_PLAYER_ID"), unique=False)
+    return save_parquet_file(df, "matchup_stats", RAW_DATA_DIR, overwrite=force)
