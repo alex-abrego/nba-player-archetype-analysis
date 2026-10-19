@@ -1,0 +1,18 @@
+file,expected_endpoint,expected_season,expected_season_type,rows,historical_settings_verified
+advanced_stats.parquet,LeagueDashPlayerStats,2025-26,Regular Season,582,No
+base_stats.parquet,LeagueDashPlayerStats,2025-26,Regular Season,582,No
+catchshoot_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
+drives_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
+efficiency_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
+hustle_stats.parquet,LeagueHustleStatsPlayer,2025-26,Regular Season,581,No
+matchup_stats.parquet,LeagueSeasonMatchups,2025-26,Regular Season,147805,No
+painttouch_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
+passing_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
+possessions_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
+posttouch_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
+pullupshot_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
+rebounding_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,578,No
+scoring_stats.parquet,LeagueDashPlayerStats,2025-26,Regular Season,582,No
+shot_locations.parquet,LeagueDashPlayerShotLocations,2025-26,Regular Season,582,No
+speeddistance_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
+usage_stats.parquet,LeagueDashPlayerStats,2025-26,Regular Season,582,No
