@@ -489,7 +489,7 @@ shot_locations,BACKCOURT_FGA
 shot_locations,BACKCOURT_FG_PCT
 shot_locations,CORNER_3_FGM
 shot_locations,CORNER_3_FGA
-shot_locations,CORNER_3_PCT
+shot_locations,CORNER_3_FG_PCT
 speeddistance_stats,PLAYER_ID
 speeddistance_stats,PLAYER_NAME
 speeddistance_stats,TEAM_ID

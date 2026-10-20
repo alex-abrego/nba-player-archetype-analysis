@@ -23,13 +23,13 @@ def main():
             "matchups",
             "all"
         ],
-        help = "Choose which data to collect."
+        help="Choose which data to collect."
     )
 
     parser.add_argument(
         "--force",
-        action = "store_true",
-        help = "Download fresh data and overwrite existing files."
+        action="store_true",
+        help="Download fresh data and overwrite existing files."
     )
 
     args = parser.parse_args()

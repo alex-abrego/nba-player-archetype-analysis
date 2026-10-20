@@ -1,18 +1,18 @@
-file,expected_endpoint,expected_season,expected_season_type,rows,historical_settings_verified
-advanced_stats.parquet,LeagueDashPlayerStats,2025-26,Regular Season,582,No
-base_stats.parquet,LeagueDashPlayerStats,2025-26,Regular Season,582,No
-catchshoot_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
-drives_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
-efficiency_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
-hustle_stats.parquet,LeagueHustleStatsPlayer,2025-26,Regular Season,581,No
-matchup_stats.parquet,LeagueSeasonMatchups,2025-26,Regular Season,147805,No
-painttouch_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
-passing_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
-possessions_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
-posttouch_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
-pullupshot_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
-rebounding_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,578,No
-scoring_stats.parquet,LeagueDashPlayerStats,2025-26,Regular Season,582,No
-shot_locations.parquet,LeagueDashPlayerShotLocations,2025-26,Regular Season,582,No
-speeddistance_stats.parquet,LeagueDashPtStats,2025-26,Regular Season,582,No
-usage_stats.parquet,LeagueDashPlayerStats,2025-26,Regular Season,582,No
+file,source,endpoint,season,season_type,per_mode,measure_type,distance_range,collected_at_utc,file_size_bytes
+base_stats.parquet,NBA Stats API via nba_api,LeagueDashPlayerStats,2025-26,Regular Season,Totals,Base,,2026-10-19T23:24:01+00:00,160299
+advanced_stats.parquet,NBA Stats API via nba_api,LeagueDashPlayerStats,2025-26,Regular Season,Totals,Advanced,,2026-10-19T23:24:03+00:00,221265
+scoring_stats.parquet,NBA Stats API via nba_api,LeagueDashPlayerStats,2025-26,Regular Season,Totals,Scoring,,2026-10-19T23:24:04+00:00,144756
+usage_stats.parquet,NBA Stats API via nba_api,LeagueDashPlayerStats,2025-26,Regular Season,Totals,Usage,,2026-10-19T23:24:08+00:00,148061
+passing_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Regular Season,Totals,Passing,,2026-10-19T23:24:10+00:00,45687
+rebounding_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Regular Season,Totals,Rebounding,,2026-10-19T23:24:14+00:00,80509
+speeddistance_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Regular Season,Totals,SpeedDistance,,2026-10-19T23:24:16+00:00,43569
+possessions_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Regular Season,Totals,Possessions,,2026-10-19T23:24:18+00:00,57088
+drives_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Regular Season,Totals,Drives,,2026-10-19T23:24:19+00:00,57768
+catchshoot_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Regular Season,Totals,CatchShoot,,2026-10-19T23:24:21+00:00,40501
+pullupshot_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Regular Season,Totals,PullUpShot,,2026-10-19T23:24:22+00:00,38417
+posttouch_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Regular Season,Totals,PostTouch,,2026-10-19T23:24:24+00:00,51923
+painttouch_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Regular Season,Totals,PaintTouch,,2026-10-19T23:24:27+00:00,55726
+efficiency_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Regular Season,Totals,Efficiency,,2026-10-19T23:24:29+00:00,52785
+shot_locations.parquet,NBA Stats API via nba_api,LeagueDashPlayerShotLocations,2025-26,Regular Season,Totals,Shot Locations,By Zone,2026-10-19T23:24:31+00:00,62800
+hustle_stats.parquet,NBA Stats API via nba_api,LeagueHustleStatsPlayer,2025-26,Regular Season,Totals,Hustle,,2026-10-19T23:24:31+00:00,58411
+matchup_stats.parquet,NBA Stats API via nba_api,LeagueSeasonMatchups,2025-26,Regular Season,Totals,Matchups,,2026-10-19T23:24:33+00:00,2058551

@@ -1,7 +1,8 @@
 import pandas as pd
 from pathlib import Path
 from time import sleep
-from nba_archetypes.config import SEASON, SEASON_TYPE, RAW_DATA_DIR
+from datetime import datetime, timezone
+from nba_archetypes.config import SEASON, SEASON_TYPE, RAW_DATA_DIR, METADATA_DIR
 from nba_archetypes.data_validation import validate_api_data
 from nba_api.stats.endpoints import (
     leaguedashplayerstats,
@@ -14,14 +15,17 @@ from nba_api.stats.endpoints import (
 
 def csv_to_parquet(csv_file_name: str, parquet_file_name: str, target_dir: Path) -> None:
     """
-    Converts a CSV file to a Parquet file.
-    
-    Args:
-        csv_file_name (str): The name of the CSV file to convert (without .csv extension).
-        parquet_file_name (str): The name of the Parquet file to create (without .parquet extension).
+     Convert an existing CSV dataset into Parquet format.
 
-    Results:
-        A Parquet file saved in the RAW_DATA_DIR directory.
+    Reads a CSV file from the raw data directory and saves it as a Parquet file in the specified destination directory.
+
+    Args:
+        csv_file_name (str): Source filename without the .csv extension.
+        parquet_file_name (str): Output filename without the .parquet extension.
+        target_dir (Path): Directory where the Parquet file will be saved.
+
+    Returns:
+        None. Saves the converted file and prints a confirmation.
     """
     df = pd.read_csv(RAW_DATA_DIR / f"{csv_file_name}.csv")
     save_parquet_file(df, parquet_file_name, target_dir)
@@ -31,15 +35,22 @@ def csv_to_parquet(csv_file_name: str, parquet_file_name: str, target_dir: Path)
 
 def save_parquet_file(df: pd.DataFrame, file_name: str, target_dir: Path, overwrite: bool = False) -> Path:
     """
-    Saves a DataFrame as a Parquet file.
-    
-    Args:
-        df (pd.DataFrame): The DataFrame to save.
-        file_name (str): The name of the Parquet file to create (without .parquet extension).
-        target_dir (Path): The file Path that the saved file should be stored in.
+    Save a pandas DataFrame as a Parquet file.
 
-    Results:
-        A Parquet file saved in the target_dir directory.
+    Creates the destination directory if necessary and writes to a temporary file before replacing the destination. Existing files
+    are protected unless overwriting is explicitly allowed.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing the data to save.
+        file_name (str): Output filename without the .parquet extension.
+        target_dir (Path): Directory where the file will be saved.
+        overwrite (bool): Whether to replace an existing file. Defaults to False.
+
+    Returns:
+        Path: Location of the saved Parquet file.
+
+    Raises:
+        FileExistsError: If the destination already exists and overwrite is False.
     """
     target_dir.mkdir(parents=True, exist_ok=True)
     file_path = target_dir / f"{file_name}.parquet"
@@ -57,15 +68,22 @@ def save_parquet_file(df: pd.DataFrame, file_name: str, target_dir: Path, overwr
 
 def save_csv_file(df: pd.DataFrame, file_name: str, target_dir: Path, overwrite: bool = False) -> Path:
     """
-    Saves a DataFrame as a csv file.
-    
-    Args:
-        df (pd.DataFrame): The DataFrame to save.
-        file_name (str): The name of the csv file to create (without .csv extension).
-        dir (Path): The file Path that the saved file should be stored in.
+    Save a pandas DataFrame as a CSV file.
 
-    Results:
-        A csv file saved in the target_dir directory.
+    Creates the destination directory if necessary and writes to a temporary file before replacing the destination. Existing files
+    are protected unless overwriting is explicitly allowed.
+
+    Args:
+        df (pd.DataFrame): DataFrame containing the data to save.
+        file_name (str): Output filename without the .csv extension.
+        target_dir (Path): Directory where the file will be saved.
+        overwrite (bool): Whether to replace an existing file. Defaults to False.
+
+    Returns:
+        Path: Location of the saved CSV file.
+
+    Raises:
+        FileExistsError: If the destination already exists and overwrite is False.
     """
     target_dir.mkdir(parents=True, exist_ok=True)
     file_path = target_dir / f"{file_name}.csv"
@@ -81,13 +99,75 @@ def save_csv_file(df: pd.DataFrame, file_name: str, target_dir: Path, overwrite:
     return file_path
 
 
+def record_source(file_path: Path, endpoint: str, measure_type: str = "", distance_range: str = "") -> None:
+    """
+    Record the collection details of a downloaded NBA dataset.
+
+    Adds or updates an entry in source_manifest.csv to document the dataset's source, API endpoint, season, collection settings,
+    timestamp, and file size.
+
+    Args:
+        file_path (Path): Location of the successfully saved dataset.
+        endpoint (str): NBA API endpoint used to collect the data.
+        measure_type (str): Statistical measure requested, if applicable.
+        distance_range (str): Shot-distance grouping, if applicable.
+
+    Returns:
+        None. Creates or updates the source manifest CSV file.
+    """
+    METADATA_DIR.mkdir(parents=True, exist_ok=True)
+    manifest_path = METADATA_DIR / "source_manifest.csv"
+
+    record = {
+        "file": file_path.name,
+        "source": "NBA Stats API via nba_api",
+        "endpoint": endpoint,
+        "season": SEASON,
+        "season_type": SEASON_TYPE,
+        "per_mode": "Totals",
+        "measure_type": measure_type,
+        "distance_range": distance_range,
+        "collected_at_utc": datetime.now(
+            timezone.utc
+        ).isoformat(timespec="seconds"),
+        "file_size_bytes": file_path.stat().st_size,
+    }
+
+    if manifest_path.exists():
+        manifest = pd.read_csv(manifest_path)
+
+        if not set(record).issubset(manifest.columns):
+            manifest = pd.DataFrame(columns=record.keys())
+        else:
+            manifest = manifest[
+                manifest["file"] != file_path.name
+            ]
+    else:
+        manifest = pd.DataFrame(columns=record.keys())
+
+    manifest = pd.concat(
+        [manifest, pd.DataFrame([record])],
+        ignore_index=True,
+    )
+
+    manifest.to_csv(manifest_path, index=False)
+
+
 def get_player_stats(measure_type: list[str] | None = None, force: bool = False) -> list[str]:
     """
-    Retrieves player stats (base, advanced, scoring, and usage) from the NBA API and saves them as a Parquet file.
-    
+     Download traditional and advanced NBA player statistics.
+
+    Retrieves the selected statistical categories from the NBA Stats API, validates the returned data, and saves each dataset as a
+    Parquet file. Records collection metadata for new downloads.
+
+    Existing files are skipped unless a refresh is requested.
+
     Args:
-        measure_type (list[str] | None): A list of measure types to retrieve. If None, retrieves all types needed.
-        force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
+        measure_type (list[str] | None): Statistical categories to collect. Defaults to Base, Advanced, Scoring, and Usage.
+        force (bool): Whether to download and replace existing datasets. Defaults to False.
+
+    Returns:
+        list[str]: Filenames of the requested Parquet datasets.
     """
     if measure_type is None:
         measure_type = [
@@ -112,7 +192,8 @@ def get_player_stats(measure_type: list[str] | None = None, force: bool = False)
                 timeout=60
             ).get_data_frames()[0]
             validate_api_data(df, required_columns=["PLAYER_ID", "PLAYER_NAME", "MIN"])
-            save_parquet_file(df, f"{type.lower()}_stats", RAW_DATA_DIR, overwrite=force)
+            file_path = save_parquet_file(df, f"{type.lower()}_stats", RAW_DATA_DIR, overwrite=force)
+            record_source(file_path, endpoint="LeagueDashPlayerStats", measure_type=type)
             sleep(1.5)
         except Exception as e:
             print(f"Error occurred while collecting {type} stats: {e}")
@@ -122,11 +203,19 @@ def get_player_stats(measure_type: list[str] | None = None, force: bool = False)
 
 def get_tracking_stats(tracking_type: list[str] | None = None, force = False) -> list[str]:
     """
-    Retrieves tracking stats from the NBA_API and saves them as Parquet files.
-    
+     Download NBA player tracking statistics.
+
+    Retrieves the selected tracking categories from the NBA Stats API, validates player identifiers, and saves each dataset as a
+    Parquet file. Records collection metadata for new downloads.
+
+    Existing files are skipped unless a refresh is requested.
+
     Args:
-        tracking_type (list[str] | None): A list of tracking stat types to retrieve. If None, retrieves all types needed.
-        force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
+        tracking_type (list[str] | None): Tracking categories to collect. Defaults to the ten tracking categories used in this project.
+        force (bool): Whether to download and replace existing datasets. Defaults to False.
+
+    Returns:
+        list[str]: Filenames of the requested Parquet datasets.
     """
     if tracking_type is None:
         tracking_type = [
@@ -158,7 +247,8 @@ def get_tracking_stats(tracking_type: list[str] | None = None, force = False) ->
                 timeout=60
             ).get_data_frames()[0]
             validate_api_data(df, required_columns=["PLAYER_ID", "PLAYER_NAME"])
-            save_parquet_file(df, f"{type.lower()}_stats", RAW_DATA_DIR, overwrite=force)
+            file_path = save_parquet_file(df, f"{type.lower()}_stats", RAW_DATA_DIR, overwrite=force)
+            record_source(file_path, endpoint="LeagueDashPtStats", measure_type=type)
             sleep(1.5)
         except Exception as e:
             print(f"Error occurred while collecting {type} stats: {e}")
@@ -167,12 +257,27 @@ def get_tracking_stats(tracking_type: list[str] | None = None, force = False) ->
 
 
 def format_shot_locations(response):
+    """
+    Convert NBA shot-location API results into a structured DataFrame.
+
+    Reads the API's hierarchical column headers and creates flat, descriptive names for each shooting zone and statistic.
+
+    Supports the recognized shooting zones and preserves all player records without removing rows.
+
+    Args:
+        response (dict): Raw response returned by the NBA shot-location endpoint using get_dict().
+
+    Returns:
+        pd.DataFrame: Player-level shooting statistics with standardized column names.
+
+    Raises:
+        ValueError: If the response contains an unexpected shooting-zone structure or inconsistent column counts.
+    """
     results = response["resultSets"]
     if isinstance(results, list):
         results = results[0]
-    headers = results["headers"]
-    zone_info = headers[0]
-    column_info = headers[1]
+    zone_info, column_info = results["headers"]
+
     zone_names = {
         "Restricted Area": "RA",
         "In The Paint (Non-RA)": "PAINT_NON_RA",
@@ -181,12 +286,20 @@ def format_shot_locations(response):
         "Right Corner 3": "RIGHT_CORNER_3",
         "Above the Break 3": "ABOVE_BREAK_3",
         "Backcourt": "BACKCOURT",
+        "Corner 3": "CORNER_3"
     }
-    if (zone_info["columnNames"] != list(zone_names) or zone_info["columnSpan"] != 3):
+    zones = zone_info["columnNames"]
+    if (
+        zone_info["columnSpan"] != 3
+        or len(zones) != len(set(zones))
+        or not set(zones).issubset(zone_names)
+        or len(zones) not in (7, 8)
+    ):
         raise ValueError("Unexpected shot-location format.")
+    
     num_player_cols = zone_info["columnsToSkip"]
-    columns = column_info["columnNames"][:num_player_cols]
-    for zone in zone_info["columnNames"]:
+    columns = column_info["columnNames"][:num_player_cols].copy()
+    for zone in zones:
         for stat in ["FGM", "FGA", "FG_PCT"]:
             columns.append(f"{zone_names[zone]}_{stat}")
     if len(columns) != len(column_info["columnNames"]):
@@ -196,10 +309,18 @@ def format_shot_locations(response):
 
 def get_shot_location_stats(force=False) -> Path:
     """
-    Retrieves shot location stats from the NBA API and saves them as a Parquet file.
-    
+    Download NBA player shot-location statistics.
+
+    Retrieves shooting statistics by court zone, converts the API response into a structured DataFrame, and validates the result
+    before saving it as a Parquet file.
+
+    Records the collection settings in the source manifest. Existing data are reused unless a refresh is requested.
+
     Args:
-        force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
+        force (bool): Whether to download and replace the existing shot-location dataset. Defaults to False.
+
+    Returns:
+        Path: Location of the saved or previously cached Parquet file.
     """
     if not force and (RAW_DATA_DIR / "shot_locations.parquet").exists():
         print("shot_locations.parquet already exists. Skipping download.")
@@ -215,15 +336,25 @@ def get_shot_location_stats(force=False) -> Path:
     )
     df = format_shot_locations(response.get_dict())
     validate_api_data(df, required_columns=["PLAYER_ID", "PLAYER_NAME", "RA_FGA"])
-    return save_parquet_file(df, "shot_locations", RAW_DATA_DIR, overwrite=force)
+    file_path = save_parquet_file(df, "shot_locations", RAW_DATA_DIR, overwrite=force)
+    record_source(file_path, endpoint="LeagueDashPlayerShotLocations", measure_type="Base", distance_range="By Zone")
+    return file_path
 
 
 def get_hustle_stats(force=False) -> Path:
     """
-    Retrieves hustle stats from the NBA API and saves them as a Parquet file.
-    
+    Download NBA player hustle statistics.
+
+    Retrieves season-level hustle statistics from the NBA Stats API, validates the returned player data, and saves the results as a
+    Parquet file.
+
+    Records collection metadata and reuses existing data unless a refresh is requested.
+
     Args:
-        force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
+        force (bool): Whether to download and replace the existing hustle dataset. Defaults to False.
+
+    Returns:
+        Path: Location of the saved or previously cached Parquet file.
     """
     if not force and (RAW_DATA_DIR / "hustle_stats.parquet").exists():
         print("hustle_stats.parquet already exists. Skipping download.")
@@ -236,15 +367,25 @@ def get_hustle_stats(force=False) -> Path:
         timeout=60
         ).get_data_frames()[0]
     validate_api_data(df, required_columns=["PLAYER_ID", "PLAYER_NAME"])
-    return save_parquet_file(df, "hustle_stats", RAW_DATA_DIR, overwrite=force)
+    file_path = save_parquet_file(df, "hustle_stats", RAW_DATA_DIR, overwrite=force)
+    record_source(file_path, endpoint="LeagueHustleStatsPlayer")
+    return file_path
 
 
 def get_matchup_stats(force=False) -> Path:
     """
-    Retrieves matchup stats from the NBA API and saves them as a Parquet file.
-    
+     Download NBA player matchup statistics.
+
+    Retrieves season-level offensive and defensive player matchups from the NBA Stats API and validates the required columns.
+
+    Unlike other datasets, matchup data contain multiple observations per player because players face different opponents throughout
+    the season. Duplicate player identifiers are therefore allowed.
+
     Args:
-        force (bool): If True, forces the retrieval of data even if it already exists. Default is False.
+        force (bool): Whether to download and replace the existing matchup dataset. Defaults to False.
+
+    Returns:
+        Path: Location of the saved or previously cached Parquet file.
     """
     if not force and (RAW_DATA_DIR / "matchup_stats.parquet").exists():
         print("matchup_stats.parquet already exists. Skipping download.")
@@ -258,4 +399,6 @@ def get_matchup_stats(force=False) -> Path:
         timeout=60
         ).get_data_frames()[0]
     validate_api_data(df, required_columns=["OFF_PLAYER_ID", "DEF_PLAYER_ID", "PARTIAL_POSS"], id_columns=("OFF_PLAYER_ID", "DEF_PLAYER_ID"), unique=False)
-    return save_parquet_file(df, "matchup_stats", RAW_DATA_DIR, overwrite=force)
+    file_path = save_parquet_file(df, "matchup_stats", RAW_DATA_DIR, overwrite=force)
+    record_source(file_path, endpoint="LeagueSeasonMatchups")
+    return file_path

@@ -31,37 +31,35 @@ def test_shot_location_formatting():
         "Right Corner 3",
         "Above the Break 3",
         "Backcourt",
+        "Corner 3"
+    ]
+
+    player_columns = [
+        "PLAYER_ID", "PLAYER_NAME", "TEAM_ID",
+        "TEAM_ABBREVIATION", "AGE", "NICKNAME"
     ]
 
     fake_response = {
         "resultSets": {
             "headers": [
-                {"columnNames": zones, "columnsToSkip": 5, "columnSpan": 3},
+                {"columnNames": zones, "columnsToSkip": 6, "columnSpan": 3},
                 {
-                    "columnNames": (
-                        [
-                        "PLAYER_ID", 
-                        "PLAYER_NAME",
-                        "TEAM_ID",
-                        "TEAM_ABBREVIATION",
-                        "AGE"
-                        ]
-                        + ["FGM", "FGA", "FG_PCT"] * 7
-                    )
+                    "columnNames": (player_columns + ["FGM", "FGA", "FG_PCT"] * 8)
                 },
             ],
             "rowSet": [
-                [101, "Player A", 1, "AAA", 25] + [1, 2, 0.5] * 7,
-                [102, "Player B", 2, "BBB", 26] + [2, 4, 0.5] * 7,
+                [101, "Player A", 1, "AAA", 25, "A"] + [1, 2, 0.5] * 8,
+                [102, "Player B", 2, "BBB", 26, "B"] + [2, 4, 0.5] * 8,
             ],
         }
     }
 
     result = format_shot_locations(fake_response)
 
-    assert len(result) == 2
+    assert result.shape == (2, 30)
     assert result["PLAYER_ID"].tolist() == [101, 102]
     assert result["RA_FGA"].tolist() == [2, 4]
+    assert "CORNER_3_FG_PCT" in result.columns
 
 
 def test_save_parquet_protects_existing_file(tmp_path):

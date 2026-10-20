@@ -7,8 +7,6 @@ from nba_archetypes.config import (
     METADATA_DIR,
     SQL_DIR,
     MIN_MINUTES,
-    SEASON,
-    SEASON_TYPE,
 )
 
 from nba_archetypes.data_validation import (dataset_inventory, missing_value_report)
@@ -45,7 +43,7 @@ def main():
 
     eligible_players = con.execute(sql_query, {"MIN_MINUTES": MIN_MINUTES}).df()
 
-    con.close
+    con.close()
 
     # Validates SQL results.
     expected_count = (datasets["base_stats"]["MIN"] >= MIN_MINUTES).sum()
@@ -77,48 +75,6 @@ def main():
 
     column_inventory = pd.DataFrame(column_rows)
 
-    # Build data source manifest.
-    player_stats = {
-        "base_stats", "advanced_stats",
-        "scoring_stats", "usage_stats"
-    }
-
-    tracking_stats = {
-        "passing_stats", "rebounding_stats",
-        "speeddistance_stats", "possessions_stats",
-        "drives_stats", "catchshoot_stats",
-        "pullupshot_stats", "posttouch_stats",
-        "painttouch_stats", "efficiency_stats"
-    }
-
-    manifest_rows = []
-
-    for name, df in datasets.items():
-
-        if name in player_stats:
-            endpoint = "LeagueDashPlayerStats"
-        elif name in tracking_stats:
-            endpoint = "LeagueDashPtStats"
-        elif name == "shot_locations":
-            endpoint = "LeagueDashPlayerShotLocations"
-        elif name == "hustle_stats":
-            endpoint = "LeagueHustleStatsPlayer"
-        elif name == "matchup_stats":
-            endpoint = "LeagueSeasonMatchups"
-        else:
-            endpoint = "Unknown"
-
-        manifest_rows.append({
-            "file": f"{name}.parquet",
-            "expected_endpoint": endpoint,
-            "expected_season": SEASON,
-            "expected_season_type": SEASON_TYPE,
-            "rows": len(df),
-            "historical_settings_verified": "No",
-        })
-
-    source_manifest = pd.DataFrame(manifest_rows)
-
     # Save outputs.
     save_parquet_file(
         eligible_players,
@@ -130,8 +86,7 @@ def main():
     reports = {
         "dataset_inventory": inventory,
         "missing_value_report": missing_report,
-        "column_inventory": column_inventory,
-        "source_manifest": source_manifest,
+        "column_inventory": column_inventory
     }
 
     for name, df in reports.items():
