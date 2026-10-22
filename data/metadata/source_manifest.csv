@@ -16,3 +16,12 @@ efficiency_stats.parquet,NBA Stats API via nba_api,LeagueDashPtStats,2025-26,Reg
 shot_locations.parquet,NBA Stats API via nba_api,LeagueDashPlayerShotLocations,2025-26,Regular Season,Totals,Shot Locations,By Zone,2026-10-19T23:24:31+00:00,62800
 hustle_stats.parquet,NBA Stats API via nba_api,LeagueHustleStatsPlayer,2025-26,Regular Season,Totals,Hustle,,2026-10-19T23:24:31+00:00,58411
 matchup_stats.parquet,NBA Stats API via nba_api,LeagueSeasonMatchups,2025-26,Regular Season,Totals,Matchups,,2026-10-19T23:24:33+00:00,2058551
+playtype_isolation.parquet,NBA Stats API via nba_api,SynergyPlayTypes,2025-26,Regular Season,Totals,Isolation,,2026-10-22T01:25:51+00:00,36517
+playtype_prballhandler.parquet,NBA Stats API via nba_api,SynergyPlayTypes,2025-26,Regular Season,Totals,PRBallHandler,,2026-10-22T01:25:53+00:00,41641
+playtype_prrollman.parquet,NBA Stats API via nba_api,SynergyPlayTypes,2025-26,Regular Season,Totals,PRRollman,,2026-10-22T01:25:56+00:00,35173
+playtype_spotup.parquet,NBA Stats API via nba_api,SynergyPlayTypes,2025-26,Regular Season,Totals,Spotup,,2026-10-22T01:25:58+00:00,45000
+playtype_handoff.parquet,NBA Stats API via nba_api,SynergyPlayTypes,2025-26,Regular Season,Totals,Handoff,,2026-10-22T01:29:21+00:00,34869
+playtype_cut.parquet,NBA Stats API via nba_api,SynergyPlayTypes,2025-26,Regular Season,Totals,Cut,,2026-10-22T01:29:24+00:00,39217
+playtype_offscreen.parquet,NBA Stats API via nba_api,SynergyPlayTypes,2025-26,Regular Season,Totals,OffScreen,,2026-10-22T01:29:26+00:00,31566
+playtype_postup.parquet,NBA Stats API via nba_api,SynergyPlayTypes,2025-26,Regular Season,Totals,Postup,,2026-10-22T01:29:28+00:00,28203
+playtype_offrebound.parquet,NBA Stats API via nba_api,SynergyPlayTypes,2025-26,Regular Season,Totals,OffRebound,,2026-10-22T01:33:15+00:00,36665

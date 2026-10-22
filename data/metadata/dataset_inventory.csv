@@ -8,6 +8,15 @@ hustle_stats,581,28,0
 matchup_stats,147805,27,0
 painttouch_stats,582,26,0
 passing_stats,582,18,0
+playtype_cut,339,24,0
+playtype_handoff,276,24,0
+playtype_isolation,284,24,0
+playtype_offrebound,301,24,0
+playtype_offscreen,215,24,0
+playtype_postup,149,24,0
+playtype_prballhandler,347,24,0
+playtype_prrollman,269,24,0
+playtype_spotup,400,24,0
 possessions_stats,582,21,0
 posttouch_stats,582,26,0
 pullupshot_stats,582,16,262

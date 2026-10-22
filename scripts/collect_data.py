@@ -5,7 +5,8 @@ from nba_archetypes.data_collection import(
     get_tracking_stats,
     get_shot_location_stats,
     get_hustle_stats,
-    get_matchup_stats
+    get_matchup_stats,
+    get_play_type_stats
 )
 
 
@@ -21,6 +22,7 @@ def main():
             "shot_locations",
             "hustle",
             "matchups",
+            "playtypes",
             "all"
         ],
         help="Choose which data to collect."
@@ -49,6 +51,9 @@ def main():
 
     if args.dataset in ("matchups", "all"):
         get_matchup_stats(force=args.force)
+
+    if args.dataset in ("playtypes", "all"):
+        get_play_type_stats(force=args.force)
 
     print("Data collection completed successfully.")
 

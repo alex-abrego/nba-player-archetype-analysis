@@ -9,7 +9,8 @@ from nba_api.stats.endpoints import (
     leaguedashptstats,
     leaguedashplayershotlocations,
     leaguehustlestatsplayer,
-    leagueseasonmatchups
+    leagueseasonmatchups,
+    synergyplaytypes
 )
 
 
@@ -99,7 +100,14 @@ def save_csv_file(df: pd.DataFrame, file_name: str, target_dir: Path, overwrite:
     return file_path
 
 
-def record_source(file_path: Path, endpoint: str, measure_type: str = "", distance_range: str = "") -> None:
+def record_source(
+        file_path: Path, 
+        endpoint: str, 
+        measure_type: str = "", 
+        distance_range: str = "", 
+        play_type: str = "", 
+        type_grouping: str = ""
+        ) -> None:
     """
     Record the collection details of a downloaded NBA dataset.
 
@@ -135,13 +143,10 @@ def record_source(file_path: Path, endpoint: str, measure_type: str = "", distan
 
     if manifest_path.exists():
         manifest = pd.read_csv(manifest_path)
-
-        if not set(record).issubset(manifest.columns):
-            manifest = pd.DataFrame(columns=record.keys())
-        else:
-            manifest = manifest[
-                manifest["file"] != file_path.name
-            ]
+        for column in record:
+            if column not in manifest.columns:
+                manifest[column] = pd.NA
+        manifest = manifest[manifest["file"] != file_path.name].copy()
     else:
         manifest = pd.DataFrame(columns=record.keys())
 
@@ -402,3 +407,58 @@ def get_matchup_stats(force=False) -> Path:
     file_path = save_parquet_file(df, "matchup_stats", RAW_DATA_DIR, overwrite=force)
     record_source(file_path, endpoint="LeagueSeasonMatchups")
     return file_path
+
+def get_play_type_stats(play_types: list[str] | None = None, force: bool = False) -> list[str]:
+    """
+    Download offensive NBA play-type statistics.
+
+    Retrieves player-level Synergy play-type totals, validates the
+    returned data, and saves each category as a Parquet file.
+
+    Args:
+        play_types (list[str] | None): Play types to download. Defaults to the eight categories selected for this project.
+        force (bool): Whether to overwrite existing cached files.
+
+    Returns:
+        list[str]: Filenames of the requested datasets.
+    """
+    if play_types is None:
+        play_types = [
+            "Isolation",
+            "PRBallHandler",
+            "PRRollman",
+            "Spotup",
+            "Handoff",
+            "Cut",
+            "OffScreen",
+            "Postup",
+            "OffRebound"
+        ]
+    for type in play_types:
+            file_name = f"playtype_{type.lower()}.parquet"
+            file_path = RAW_DATA_DIR / file_name
+            if file_path.exists() and not force:
+                print(f"{file_name} already exists. Skipping download.")
+                continue
+            print(f"Collecting {type} stats...")
+            try:
+                df = synergyplaytypes.SynergyPlayTypes(
+                    per_mode_simple="Totals",
+                    player_or_team_abbreviation="P",
+                    season=SEASON,
+                    season_type_all_star=SEASON_TYPE,
+                    play_type_nullable=type,
+                    type_grouping_nullable="Offensive",
+                    timeout=60,
+                ).get_data_frames()[0]
+                validate_api_data(df, required_columns=["PLAYER_ID", "PLAYER_NAME", "POSS"], id_columns=("PLAYER_ID", "TEAM_ID"), unique=False)
+                key_columns = ["PLAYER_ID", "TEAM_ID"]
+                if df.duplicated(subset=key_columns).any():
+                    raise ValueError(f"Duplicate player-team records found for {type}.")
+                file_path = save_parquet_file(df, f"playtype_{type.lower()}", RAW_DATA_DIR, overwrite=force)
+                record_source(file_path, endpoint="SynergyPlayTypes", measure_type=type, type_grouping="Offensive")
+                sleep(1.5)
+            except Exception as e:
+                print(f"Error occurred while collecting {type} stats: {e}")
+                raise
+    return [f"playtype_{type.lower()}.parquet" for type in play_types]
