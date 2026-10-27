@@ -157,3 +157,19 @@ def player_coverage_report(datasets: dict[str, pd.DataFrame], eligible_players: 
     return coverage_report
 
 
+def validate_candidate_features(candidate_features: pd.DataFrame, eligible_players: pd.DataFrame) -> None:
+    if len(candidate_features) != len(eligible_players):
+        raise ValueError("Candidate features row count does not match with eligble players.")
+
+    if not candidate_features["PLAYER_ID"].is_unique:
+        raise ValueError("Duplicate player IDs in candidate features.")
+
+    if set(candidate_features["PLAYER_ID"]) != set(eligible_players["PLAYER_ID"]):
+        raise ValueError("Eligible player IDs do not match.")
+
+    for column in ["POSS", "FGA"]:
+        if (
+            candidate_features[column].isna().any()
+            or (candidate_features[column] <= 0).any()
+        ):
+            raise ValueError(f"Invalid values in {column}.")

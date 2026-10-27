@@ -25,25 +25,21 @@ def main():
             raise FileNotFoundError(f"Missing dataset: {name}")
 
     # Executes eligible players SQL query.
-    con = duckdb.connect()
-
     core_data = {
-    "base_stats": (RAW_DATA_DIR / "base_stats.parquet").as_posix(),
-    "advanced_stats": (RAW_DATA_DIR / "advanced_stats.parquet").as_posix()
-}
-
-    for view_name, file_path in core_data.items():
-        con.execute(f"""
-        CREATE OR REPLACE VIEW {view_name} AS
-        SELECT *
-        FROM '{file_path}'
-        """)
+    "base_stats": (RAW_DATA_DIR / "base_stats.parquet"),
+    "advanced_stats": (RAW_DATA_DIR / "advanced_stats.parquet")
+    }
 
     sql_query = (SQL_DIR / "01_eligible_players.sql").read_text()
 
-    eligible_players = con.execute(sql_query, {"MIN_MINUTES": MIN_MINUTES}).df()
-
-    con.close()
+    with duckdb.connect() as con:
+        for view_name, file_path in core_data.items():
+            con.execute(f"""
+            CREATE OR REPLACE VIEW {view_name} AS
+            SELECT *
+            FROM read_parquet('{file_path.as_posix()}')
+            """)
+        eligible_players = con.execute(sql_query, {"MIN_MINUTES": MIN_MINUTES}).df()
 
     # Validates SQL results.
     expected_count = (datasets["base_stats"]["MIN"] >= MIN_MINUTES).sum()

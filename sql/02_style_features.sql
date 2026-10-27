@@ -7,8 +7,8 @@ SELECT
     b.STL,
     b.BLK,
     a.USG_PCT,
-    pos.TOUCHES,
-    pos.AVG_SEC_PER_TOUCH,
+    poss.TOUCHES,
+    poss.AVG_SEC_PER_TOUCH,
     pass.PASSES_MADE,
     pass.POTENTIAL_AST,
     drv.DRIVES,
@@ -25,43 +25,43 @@ SELECT
     reb.OREB_CHANCES,
     reb.DREB_CHANCES
 
-FROM eligible players AS e
+FROM eligible_players AS e
 
-LEFT JOIN base_stats as b
+LEFT JOIN base_stats AS b
     ON e.PLAYER_ID = b.PLAYER_ID
 
-LEFT JOIN advanced_stats as a
+LEFT JOIN advanced_stats AS a
     ON e.PLAYER_ID = a.PLAYER_ID
 
-LEFT JOIN possessions_stats as poss
+LEFT JOIN possessions_stats AS poss
     ON e.PLAYER_ID = poss.PLAYER_ID
 
-LEFT JOIN passing_stats as pass
+LEFT JOIN passing_stats AS pASs
     ON e.PLAYER_ID = pass.PLAYER_ID
 
-LEFT JOIN drives_stats as drv
+LEFT JOIN drives_stats AS drv
     ON e.PLAYER_ID = drv.PLAYER_ID
 
-LEFT JOIN shot_locations_stats as shot
+LEFT JOIN shot_locations AS shot
     ON e.PLAYER_ID = shot.PLAYER_ID
 
-LEFT JOIN pullupshot_stats as pull
+LEFT JOIN pullupshot_stats AS pull
     ON e.PLAYER_ID = pull.PLAYER_ID
 
-LEFT JOIN scoring_stats as score
+LEFT JOIN scoring_stats AS score
     ON e.PLAYER_ID = score.PLAYER_ID
 
-LEFT JOIN catchshoot_stats as cs
+LEFT JOIN catchshoot_stats AS cs
     ON e.PLAYER_ID = cs.PLAYER_ID
 
-LEFT JOIN painttouch_stats as paint
+LEFT JOIN painttouch_stats AS paint
     ON e.PLAYER_ID = paint.PLAYER_ID
 
-LEFT JOIN posttouch_stats as post
+LEFT JOIN posttouch_stats AS post
     ON e.PLAYER_ID = post.PLAYER_ID
 
-LEFT JOIN hustle_stats as hust
+LEFT JOIN hustle_stats AS hust
     ON e.PLAYER_ID = hust.PLAYER_ID
 
-LEFT JOIN rebounding_stats as reb
-    ON e.PLAYER_ID = reb.PLAYER_ID
+LEFT JOIN rebounding_stats AS reb
+    ON e.PLAYER_ID = reb.PLAYER_ID;
