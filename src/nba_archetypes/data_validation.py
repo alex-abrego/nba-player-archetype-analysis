@@ -167,7 +167,7 @@ def validate_candidate_features(candidate_features: pd.DataFrame, eligible_playe
     if set(candidate_features["PLAYER_ID"]) != set(eligible_players["PLAYER_ID"]):
         raise ValueError("Eligible player IDs do not match.")
 
-    for column in ["POSS", "FGA"]:
+    for column in ["POSS", "FGA", "CONTESTED_SHOTS"]:
         if (
             candidate_features[column].isna().any()
             or (candidate_features[column] <= 0).any()
