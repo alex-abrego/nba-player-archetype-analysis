@@ -10,7 +10,7 @@ SELECT
     poss.TOUCHES,
     poss.AVG_SEC_PER_TOUCH,
     pass.PASSES_MADE,
-    pass.POTENTIAL_AST,
+    pass.AST_ADJ,
     drv.DRIVES,
     shot.RA_FGA,
     pull.PULL_UP_FGA,
