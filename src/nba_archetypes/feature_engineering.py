@@ -83,3 +83,120 @@ def build_dimension_scores(player_features: pd.DataFrame, feature_dimensions: di
     df[scaled_dimensions.columns] = scaled_dimensions
 
     return df, feature_scaler, dimension_scaler
+
+
+POSITIONS = ["G", "F", "C"]
+
+def calculate_matchup_diversity(
+    rollup,
+    min_possessions=200,
+):
+    """Measure diversity of recorded G/F/C matchups."""
+
+    required = {
+        "DEF_PLAYER_ID",
+        "POSITION",
+        "PARTIAL_POSS",
+    }
+
+    if not required.issubset(rollup.columns):
+        raise ValueError("Missing matchup columns.")
+
+    data = rollup.copy()
+
+    data["POSITION"] = (
+        data["POSITION"].astype(str).str.strip().str.upper()
+    )
+
+    data["PARTIAL_POSS"] = pd.to_numeric(
+        data["PARTIAL_POSS"],
+        errors="raise",
+    )
+
+    valid_positions = set(POSITIONS + ["TOTAL"])
+
+    if not data["POSITION"].isin(valid_positions).all():
+        raise ValueError("Unexpected position category.")
+
+    if (
+        data["PARTIAL_POSS"].isna().any()
+        or (data["PARTIAL_POSS"] < 0).any()
+    ):
+        raise ValueError("Invalid matchup possessions.")
+
+    if data.duplicated(
+        ["DEF_PLAYER_ID", "POSITION"]
+    ).any():
+        raise ValueError("Duplicate defender-position rows.")
+
+    # Keep the three offensive position categories.
+    position_rows = data[
+        data["POSITION"].isin(POSITIONS)
+    ]
+
+    counts = position_rows.pivot(
+        index="DEF_PLAYER_ID",
+        columns="POSITION",
+        values="PARTIAL_POSS",
+    )
+
+    counts = counts.reindex(
+        columns=POSITIONS
+    ).fillna(0)
+
+    # Total recorded matchup possessions.
+    volume = counts.sum(axis=1)
+
+    # Share of matchups against each position.
+    shares = counts.div(
+        volume.replace(0, np.nan),
+        axis=0,
+    ).fillna(0)
+
+    p = shares.to_numpy()
+
+    # Handle zero shares without taking log(0).
+    safe_p = np.where(p > 0, p, 1.0)
+
+    entropy = -(p * np.log(safe_p)).sum(axis=1)
+    diversity = 100 * entropy / np.log(3)
+
+    result = shares.rename(
+        columns={
+            "G": "MATCHUP_SHARE_G",
+            "F": "MATCHUP_SHARE_F",
+            "C": "MATCHUP_SHARE_C",
+        }
+    ).copy()
+
+    result["MATCHUP_POSSESSIONS"] = volume
+    result["MATCHUP_DIVERSITY_RAW"] = diversity
+
+    # Compare G/F/C totals against the endpoint's
+    # supplied TOTAL row as a data-quality check.
+    total_rows = data[
+        data["POSITION"] == "TOTAL"
+    ].set_index("DEF_PLAYER_ID")["PARTIAL_POSS"]
+
+    result["ROLLUP_TOTAL_POSS"] = total_rows
+
+    result["ROLLUP_COVERAGE"] = (
+        result["MATCHUP_POSSESSIONS"]
+        / result["ROLLUP_TOTAL_POSS"].replace(0, np.nan)
+    )
+
+    # Provisional quality thresholds.
+    result["VALID_FOR_MODEL"] = (
+        (result["MATCHUP_POSSESSIONS"] >= min_possessions)
+        & result["ROLLUP_COVERAGE"].between(0.95, 1.05)
+    )
+
+    # Missing means insufficient or unverified evidence,
+    # NOT zero defensive versatility.
+    result["POSITIONAL_MATCHUP_DIVERSITY"] = (
+        result["MATCHUP_DIVERSITY_RAW"].where(
+            result["VALID_FOR_MODEL"]
+        )
+    )
+
+    return result.reset_index()
