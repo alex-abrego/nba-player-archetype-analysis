@@ -8,6 +8,7 @@ from nba_api.stats.endpoints import (
     leaguedashplayerstats,
     leaguedashptstats,
     leaguedashplayershotlocations,
+    leaguedashptdefend,
     leaguehustlestatsplayer,
     leagueseasonmatchups,
     synergyplaytypes
@@ -408,6 +409,7 @@ def get_matchup_stats(force=False) -> Path:
     record_source(file_path, endpoint="LeagueSeasonMatchups")
     return file_path
 
+
 def get_play_type_stats(play_types: list[str] | None = None, force: bool = False) -> list[str]:
     """
     Download offensive NBA play-type statistics.
@@ -462,3 +464,38 @@ def get_play_type_stats(play_types: list[str] | None = None, force: bool = False
                 print(f"Error occurred while collecting {type} stats: {e}")
                 raise
     return [f"playtype_{type.lower()}.parquet" for type in play_types]
+
+
+def get_defend_stats(category_types: list[str] | None = None, force = False) -> list[str]:
+    if category_types is None:
+        category_types = [
+            "Overall",
+            "Less Than 6Ft",
+            "3 Pointers",
+            ]
+    for type in category_types:
+        file_name = f"defend_{type.lower().replace(" ", "_")}.parquet"
+        file_path = RAW_DATA_DIR / file_name
+        if file_path.exists() and not force:
+            print(f"{file_name} already exists. Skipping download.")
+            continue
+        print(f"Collecting {type} stats...")
+        try:
+            df = leaguedashptdefend.LeagueDashPtDefend(
+                season=SEASON,
+                season_type_all_star=SEASON_TYPE,
+                defense_category=type,
+                per_mode_simple="Totals",
+                timeout=60,
+            ).get_data_frames()[0]
+            validate_api_data(df, required_columns=["CLOSE_DEF_PERSON_ID", "PLAYER_NAME"])
+            key_columns = ["CLOSE_DEF_PERSON_ID"]
+            if df.duplicated(subset=key_columns).any():
+                raise ValueError(f"Duplicate player-team records found for {type}.")
+            file_path = save_parquet_file(df, f"defend_{type.lower().replace(" ", "_")}", RAW_DATA_DIR, overwrite=force)
+            record_source(file_path, endpoint="LeagueDashPtDefend", measure_type=type)
+            sleep(1.5)
+        except Exception as e:
+            print(f"Error occurred while collecting {type} stats: {e}")
+            raise
+    return [f"defend_{type.lower().replace(" ", "_")}.parquet" for type in category_types]
